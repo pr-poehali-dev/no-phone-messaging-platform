@@ -1,0 +1,48 @@
+{
+  "tests": [
+    {
+      "name": "Get user chats",
+      "method": "GET",
+      "path": "/",
+      "headers": {
+        "X-User-Id": "1"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "chats": [
+          {
+            "chat_id": 1
+          }
+        ]
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Create existing chat returns 200",
+      "method": "POST",
+      "path": "/",
+      "headers": {
+        "X-User-Id": "1"
+      },
+      "body": {
+        "action": "create_chat",
+        "other_user_id": "2"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "chat_id": 1
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Reject request without user ID",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 401,
+      "expectedBody": {
+        "error": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

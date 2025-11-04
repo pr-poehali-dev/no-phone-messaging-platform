@@ -65,6 +65,8 @@ const Index = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [isLoadingChats, setIsLoadingChats] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
@@ -77,6 +79,75 @@ const Index = () => {
       setIsAuthModalOpen(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (currentUser) {
+      loadChats();
+    }
+  }, [currentUser]);
+
+  const loadChats = async () => {
+    if (!currentUser) return;
+    
+    setIsLoadingChats(true);
+    try {
+      const response = await fetch('https://functions.poehali.dev/ec02e22a-fc0e-43bd-ad09-453e209dc51d', {
+        headers: {
+          'X-User-Id': currentUser.id.toString(),
+        },
+      });
+      const data = await response.json();
+      
+      const formattedChats: Chat[] = data.chats.map((chat: any) => ({
+        id: chat.chat_id.toString(),
+        user: {
+          id: chat.other_user_id.toString(),
+          username: chat.other_username,
+          avatar: chat.other_avatar,
+          status: chat.other_status,
+        },
+        lastMessage: {
+          id: '1',
+          text: chat.last_message || 'Новый чат',
+          senderId: chat.other_user_id.toString(),
+          timestamp: chat.last_message_time ? new Date(chat.last_message_time).toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' }) : '',
+        },
+        unreadCount: chat.unread_count,
+      }));
+      
+      setChats(formattedChats);
+      if (formattedChats.length > 0 && !selectedChat) {
+        setSelectedChat(formattedChats[0]);
+      }
+    } catch (error) {
+      console.error('Failed to load chats:', error);
+    } finally {
+      setIsLoadingChats(false);
+    }
+  };
+
+  const handleStartChat = async (otherUserId: string) => {
+    try {
+      const response = await fetch('https://functions.poehali.dev/ec02e22a-fc0e-43bd-ad09-453e209dc51d', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': currentUser.id.toString(),
+        },
+        body: JSON.stringify({
+          action: 'create_chat',
+          other_user_id: otherUserId,
+        }),
+      });
+      
+      const data = await response.json();
+      await loadChats();
+      setActiveTab('chats');
+      setSearchQuery('');
+    } catch (error) {
+      console.error('Failed to create chat:', error);
+    }
+  };
 
   useEffect(() => {
     const searchUsers = async () => {
@@ -159,7 +230,18 @@ const Index = () => {
           </div>
 
           <ScrollArea className="flex-1">
-            {mockChats.map((chat) => (
+            {isLoadingChats ? (
+              <div className="flex items-center justify-center py-8">
+                <Icon name="Loader2" size={32} className="animate-spin text-primary" />
+              </div>
+            ) : chats.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Icon name="MessageSquare" size={48} className="mx-auto mb-2 opacity-50" />
+                <p>Нет чатов</p>
+                <p className="text-sm mt-1">Найдите пользователя через поиск</p>
+              </div>
+            ) : (
+              chats.map((chat) => (
               <div
                 key={chat.id}
                 onClick={() => setSelectedChat(chat)}
@@ -191,7 +273,8 @@ const Index = () => {
                   </Badge>
                 )}
               </div>
-            ))}
+              ))
+            )}
           </ScrollArea>
         </div>
       )}
@@ -324,7 +407,10 @@ const Index = () => {
                             {user.status === 'online' ? 'онлайн' : 'не в сети'}
                           </p>
                         </div>
-                        <Button className="bg-gradient-to-r from-primary to-secondary hover:opacity-90">
+                        <Button 
+                          className="bg-gradient-to-r from-primary to-secondary hover:opacity-90"
+                          onClick={() => handleStartChat(user.id.toString())}
+                        >
                           Написать
                         </Button>
                       </div>
