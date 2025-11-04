@@ -60,6 +60,8 @@ const Index = () => {
   const [selectedChat, setSelectedChat] = useState<Chat | null>(mockChats[0]);
   const [messageText, setMessageText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
@@ -75,6 +77,32 @@ const Index = () => {
       setIsAuthModalOpen(true);
     }
   }, []);
+
+  useEffect(() => {
+    const searchUsers = async () => {
+      if (searchQuery.length < 2) {
+        setSearchResults([]);
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        const response = await fetch(
+          `https://functions.poehali.dev/8dfc48fe-94ae-463c-9e18-886ae2f7748d?query=${encodeURIComponent(searchQuery)}`
+        );
+        const data = await response.json();
+        setSearchResults(data.users || []);
+      } catch (error) {
+        console.error('Search error:', error);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const timeoutId = setTimeout(searchUsers, 300);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
 
   const handleAuthSuccess = (user: any, token: string) => {
     setCurrentUser(user);
@@ -270,33 +298,51 @@ const Index = () => {
               <Icon name="Search" size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             </div>
 
-            {searchQuery && (
+            {searchQuery && searchQuery.length >= 2 && (
               <div className="space-y-2">
-                <h3 className="text-sm text-muted-foreground mb-3">Результаты поиска:</h3>
-                {[
-                  { username: 'космонавт_alex', status: 'online' },
-                  { username: 'space_explorer', status: 'offline' },
-                ].map((user, idx) => (
-                  <div
-                    key={idx}
-                    className="p-4 bg-card rounded-xl flex items-center gap-3 hover:bg-muted/50 transition-colors cursor-pointer"
-                  >
-                    <Avatar className="h-12 w-12">
-                      <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white">
-                        {user.username[0].toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <h3 className="font-semibold">{user.username}</h3>
-                      <p className="text-xs text-muted-foreground">
-                        {user.status === 'online' ? 'онлайн' : 'не в сети'}
-                      </p>
-                    </div>
-                    <Button className="bg-gradient-to-r from-primary to-secondary hover:opacity-90">
-                      Написать
-                    </Button>
+                {isSearching ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Icon name="Loader2" size={32} className="animate-spin text-primary" />
                   </div>
-                ))}
+                ) : searchResults.length > 0 ? (
+                  <>
+                    <h3 className="text-sm text-muted-foreground mb-3">Найдено: {searchResults.length}</h3>
+                    {searchResults.map((user, idx) => (
+                      <div
+                        key={idx}
+                        className="p-4 bg-card rounded-xl flex items-center gap-3 hover:bg-muted/50 transition-colors cursor-pointer"
+                      >
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={user.avatar_url} />
+                          <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white">
+                            {user.username[0].toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <h3 className="font-semibold">{user.username}</h3>
+                          <p className="text-xs text-muted-foreground">
+                            {user.status === 'online' ? 'онлайн' : 'не в сети'}
+                          </p>
+                        </div>
+                        <Button className="bg-gradient-to-r from-primary to-secondary hover:opacity-90">
+                          Написать
+                        </Button>
+                      </div>
+                    ))}
+                  </>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Icon name="UserX" size={48} className="mx-auto mb-2 opacity-50" />
+                    <p>Пользователи не найдены</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {searchQuery && searchQuery.length < 2 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <Icon name="Search" size={48} className="mx-auto mb-2 opacity-50" />
+                <p>Введите минимум 2 символа</p>
               </div>
             )}
           </div>

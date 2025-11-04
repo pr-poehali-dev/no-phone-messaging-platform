@@ -1,0 +1,24 @@
+{
+  "tests": [
+    {
+      "name": "Search users by username",
+      "method": "GET",
+      "path": "/?query=nonexistent_xyz",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "users": []
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Reject short query",
+      "method": "GET",
+      "path": "/?query=a",
+      "expectedStatus": 400,
+      "expectedBody": {
+        "error": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
