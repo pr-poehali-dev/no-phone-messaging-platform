@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Icon from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import AuthModal from '@/components/AuthModal';
 
 type User = {
   id: string;
@@ -59,8 +60,53 @@ const Index = () => {
   const [selectedChat, setSelectedChat] = useState<Chat | null>(mockChats[0]);
   const [messageText, setMessageText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [authToken, setAuthToken] = useState<string | null>(null);
 
-  const currentUser = { id: 'me', username: 'rocket_pilot', avatar: '' };
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    const user = localStorage.getItem('user');
+    
+    if (token && user) {
+      setAuthToken(token);
+      setCurrentUser(JSON.parse(user));
+    } else {
+      setIsAuthModalOpen(true);
+    }
+  }, []);
+
+  const handleAuthSuccess = (user: any, token: string) => {
+    setCurrentUser(user);
+    setAuthToken(token);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user');
+    setCurrentUser(null);
+    setAuthToken(null);
+    setIsAuthModalOpen(true);
+  };
+
+  if (!currentUser) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        <AuthModal 
+          isOpen={isAuthModalOpen} 
+          onClose={() => {}} 
+          onSuccess={handleAuthSuccess}
+        />
+        <div className="text-center">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center mx-auto mb-4">
+            <Icon name="Rocket" size={40} className="text-white" />
+          </div>
+          <h1 className="text-3xl font-bold mb-2">Добро пожаловать!</h1>
+          <p className="text-muted-foreground">Войдите или зарегистрируйтесь</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleSendMessage = () => {
     if (messageText.trim()) {
@@ -265,17 +311,17 @@ const Index = () => {
             </AvatarFallback>
           </Avatar>
           <div className="text-center">
-            <h2 className="text-3xl font-bold mb-2">{currentUser.username}</h2>
-            <p className="text-muted-foreground">ID: {currentUser.id}</p>
+            <h2 className="text-3xl font-bold mb-2">{currentUser?.username || 'rocket_pilot'}</h2>
+            <p className="text-muted-foreground">ID: {currentUser?.id || 'me'}</p>
           </div>
           <div className="flex gap-3">
             <Button variant="outline" className="gap-2">
               <Icon name="Edit" size={18} />
               Изменить профиль
             </Button>
-            <Button variant="outline" className="gap-2">
-              <Icon name="Settings" size={18} />
-              Настройки
+            <Button variant="outline" className="gap-2" onClick={handleLogout}>
+              <Icon name="LogOut" size={18} />
+              Выйти
             </Button>
           </div>
         </div>

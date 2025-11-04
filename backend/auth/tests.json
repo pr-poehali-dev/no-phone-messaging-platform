@@ -1,0 +1,55 @@
+{
+  "tests": [
+    {
+      "name": "Register new user",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "register",
+        "username": "test_user_123",
+        "password": "securepass123"
+      },
+      "expectedStatus": 201,
+      "expectedBody": {
+        "user": {
+          "username": "string"
+        },
+        "token": "string"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Login existing user",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "login",
+        "username": "test_user_123",
+        "password": "securepass123"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "user": {
+          "username": "string"
+        },
+        "token": "string"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Reject duplicate username",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "register",
+        "username": "test_user_123",
+        "password": "anotherpass"
+      },
+      "expectedStatus": 409,
+      "expectedBody": {
+        "error": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
