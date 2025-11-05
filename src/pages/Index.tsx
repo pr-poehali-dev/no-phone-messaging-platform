@@ -67,6 +67,8 @@ const Index = () => {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
   const [isLoadingChats, setIsLoadingChats] = useState(true);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
@@ -85,6 +87,28 @@ const Index = () => {
       loadChats();
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    if (selectedChat && currentUser) {
+      loadMessages(selectedChat.id);
+      
+      const interval = setInterval(() => {
+        loadMessages(selectedChat.id);
+      }, 3000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [selectedChat?.id]);
+
+  useEffect(() => {
+    if (currentUser && activeTab === 'chats') {
+      const interval = setInterval(() => {
+        loadChats();
+      }, 5000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [currentUser, activeTab]);
 
   const loadChats = async () => {
     if (!currentUser) return;
@@ -118,6 +142,13 @@ const Index = () => {
       setChats(formattedChats);
       if (formattedChats.length > 0 && !selectedChat) {
         setSelectedChat(formattedChats[0]);
+        await loadMessages(formattedChats[0].id);
+      }
+      if (selectedChat) {
+        const updatedChat = formattedChats.find(c => c.id === selectedChat.id);
+        if (updatedChat) {
+          setSelectedChat(updatedChat);
+        }
       }
     } catch (error) {
       console.error('Failed to load chats:', error);
@@ -207,9 +238,50 @@ const Index = () => {
     );
   }
 
-  const handleSendMessage = () => {
-    if (messageText.trim()) {
-      setMessageText('');
+  const loadMessages = async (chatId: string) => {
+    if (!currentUser) return;
+    
+    setIsLoadingMessages(true);
+    try {
+      const response = await fetch(`https://functions.poehali.dev/ec02e22a-fc0e-43bd-ad09-453e209dc51d?chat_id=${chatId}`, {
+        headers: {
+          'X-User-Id': currentUser.id.toString(),
+        },
+      });
+      const data = await response.json();
+      setMessages(data.messages || []);
+    } catch (error) {
+      console.error('Failed to load messages:', error);
+      setMessages([]);
+    } finally {
+      setIsLoadingMessages(false);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!messageText.trim() || !selectedChat || !currentUser) return;
+    
+    try {
+      const response = await fetch('https://functions.poehali.dev/ec02e22a-fc0e-43bd-ad09-453e209dc51d', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': currentUser.id.toString(),
+        },
+        body: JSON.stringify({
+          action: 'send_message',
+          chat_id: selectedChat.id,
+          text: messageText,
+        }),
+      });
+      
+      if (response.ok) {
+        setMessageText('');
+        await loadMessages(selectedChat.id);
+        await loadChats();
+      }
+    } catch (error) {
+      console.error('Failed to send message:', error);
     }
   };
 
@@ -304,30 +376,41 @@ const Index = () => {
 
           <ScrollArea className="flex-1 p-4">
             <div className="flex flex-col gap-4">
-              {mockMessages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.senderId === 'me' ? 'justify-end' : 'justify-start'}`}
-                >
+              {isLoadingMessages ? (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-muted-foreground">Загрузка сообщений...</p>
+                </div>
+              ) : messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full gap-2">
+                  <Icon name="MessageCircle" size={48} className="text-muted-foreground/50" />
+                  <p className="text-muted-foreground">Начните общение первым!</p>
+                </div>
+              ) : (
+                messages.map((message) => (
                   <div
-                    className={`max-w-[70%] p-3 rounded-2xl ${
-                      message.senderId === 'me'
-                        ? 'bg-gradient-to-r from-primary to-secondary text-white'
-                        : 'bg-muted'
-                    }`}
+                    key={message.id}
+                    className={`flex ${message.sender_id.toString() === currentUser.id.toString() ? 'justify-end' : 'justify-start'}`}
                   >
-                    <p className="text-sm">{message.text}</p>
-                    <div className="flex items-center gap-1 mt-1 justify-end">
-                      <span className={`text-xs ${message.senderId === 'me' ? 'text-white/70' : 'text-muted-foreground'}`}>
-                        {message.timestamp}
-                      </span>
-                      {message.senderId === 'me' && (
-                        <Icon name={message.isRead ? 'CheckCheck' : 'Check'} size={14} className="text-white/70" />
-                      )}
+                    <div
+                      className={`max-w-[70%] p-3 rounded-2xl ${
+                        message.sender_id.toString() === currentUser.id.toString()
+                          ? 'bg-gradient-to-r from-primary to-secondary text-white'
+                          : 'bg-muted'
+                      }`}
+                    >
+                      <p className="text-sm">{message.text}</p>
+                      <div className="flex items-center gap-1 mt-1 justify-end">
+                        <span className={`text-xs ${message.sender_id.toString() === currentUser.id.toString() ? 'text-white/70' : 'text-muted-foreground'}`}>
+                          {new Date(message.created_at).toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        {message.sender_id.toString() === currentUser.id.toString() && (
+                          <Icon name={message.is_read ? 'CheckCheck' : 'Check'} size={14} className="text-white/70" />
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </ScrollArea>
 
