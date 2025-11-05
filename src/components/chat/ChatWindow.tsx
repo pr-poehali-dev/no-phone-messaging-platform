@@ -57,7 +57,7 @@ const ChatWindow = ({
 
   if (!selectedChat) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-background">
+      <div className="flex-1 flex flex-col items-center justify-center rounded-sm my-0 mx-0 bg-slate-500">
         <Icon name="MessageCircle" size={64} className="text-muted-foreground/50 mb-4" />
         <h3 className="text-lg font-semibold mb-2">Выберите чат</h3>
         <p className="text-muted-foreground">Начните общение с друзьями</p>
