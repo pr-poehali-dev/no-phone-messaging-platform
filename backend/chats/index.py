@@ -185,6 +185,40 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'isBase64Encoded': False
             }
         
+        elif action == 'delete_chat':
+            chat_id = body_data.get('chat_id')
+            
+            if not chat_id:
+                cur.close()
+                conn.close()
+                return {
+                    'statusCode': 400,
+                    'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                    'body': json.dumps({'error': 'chat_id required'}),
+                    'isBase64Encoded': False
+                }
+            
+            cur.execute(
+                "DELETE FROM messages WHERE chat_id = %s",
+                (int(chat_id),)
+            )
+            
+            cur.execute(
+                "DELETE FROM chats WHERE id = %s AND (user1_id = %s OR user2_id = %s)",
+                (int(chat_id), int(user_id), int(user_id))
+            )
+            
+            conn.commit()
+            cur.close()
+            conn.close()
+            
+            return {
+                'statusCode': 200,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'success': True}),
+                'isBase64Encoded': False
+            }
+        
         else:
             cur.close()
             conn.close()

@@ -180,6 +180,34 @@ const Index = () => {
     }
   };
 
+  const handleDeleteChat = async (chatId: string) => {
+    if (!currentUser) return;
+    
+    try {
+      const response = await fetch('https://functions.poehali.dev/ec02e22a-fc0e-43bd-ad09-453e209dc51d', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': currentUser.id.toString(),
+        },
+        body: JSON.stringify({
+          action: 'delete_chat',
+          chat_id: chatId,
+        }),
+      });
+      
+      if (response.ok) {
+        if (selectedChat?.id === chatId) {
+          setSelectedChat(null);
+          setMessages([]);
+        }
+        await loadChats();
+      }
+    } catch (error) {
+      console.error('Failed to delete chat:', error);
+    }
+  };
+
   useEffect(() => {
     const searchUsers = async () => {
       if (searchQuery.length < 2) {
@@ -371,6 +399,18 @@ const Index = () => {
             </Button>
             <Button variant="ghost" size="icon" className="rounded-full">
               <Icon name="Video" size={20} />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="rounded-full text-destructive hover:text-destructive"
+              onClick={() => {
+                if (confirm('Удалить чат для обоих пользователей?')) {
+                  handleDeleteChat(selectedChat.id);
+                }
+              }}
+            >
+              <Icon name="Trash2" size={20} />
             </Button>
           </div>
 
