@@ -52,11 +52,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     conn = get_db_connection()
     cur = conn.cursor()
     
-    search_pattern = f'%{query}%'
-    cur.execute(
-        "SELECT id, username, avatar_url, status, last_seen FROM users WHERE username ILIKE %s LIMIT 20",
-        (search_pattern,)
-    )
+    query_escaped = query.replace("'", "''")
+    sql = f"SELECT id, username, avatar_url as avatar, status, last_seen FROM users WHERE username ILIKE '%{query_escaped}%' LIMIT 20"
+    cur.execute(sql)
     
     users = cur.fetchall()
     cur.close()
